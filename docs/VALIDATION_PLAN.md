@@ -65,7 +65,7 @@ with its interval and flagged as a limitation (see the report).
 | Repeatability (within-run) | Same library, same instrument, one 3-week batch. Three disjoint read subsets at 30x | HG001_repeat_1..3 |
 | Reproducibility (between-run) | Four sequencing runs on two HiSeq instruments, Dec 2013 to Apr 2014, 30x each | HG001_run_1..4 |
 | Depth titration / LoD | Pooled reads downsampled to 5, 10, 15, 20, 30, 50, 100x | HG001_depth_* |
-| Bioinformatic reproducibility | Same FASTQ processed twice gives an identical VCF (pinned versions, fixed seeds) | Checked with `-resume` disabled |
+| Bioinformatic reproducibility | Same FASTQ processed twice from scratch gives identical GVCF, filtered and annotated VCF records | `scripts/check_determinism.sh` |
 
 Replicates are built by `scripts/make_validation_set.py` from flowcell IDs in the GIAB read names, so the
 "different runs" really are different sequencing runs and not random splits of one run.

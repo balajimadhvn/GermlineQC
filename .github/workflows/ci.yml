@@ -47,3 +47,6 @@ jobs:
             results_test/multiqc/multiqc_report.html
             results_test/database/example_queries.txt
             results_test/sampleA/qc/
+
+      - name: Determinism check (two clean runs, identical VCF records)
+        run: ./scripts/check_determinism.sh test,local

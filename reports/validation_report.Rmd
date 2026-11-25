@@ -14,7 +14,8 @@ params:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,
-                      fig.width = 8, fig.height = 4.2, dpi = 120, dev = "png")
+                      fig.width = 8, fig.height = 4.2, dpi = 120, dev = "png",
+                      fig.path = "figures/")
 suppressPackageStartupMessages({
   library(readr); library(dplyr); library(tidyr); library(ggplot2); library(scales); library(knitr)
 })
@@ -25,6 +26,7 @@ conc  <- tb("concordance.tsv")
 titr  <- tb("titration.tsv")
 crit  <- tb("acceptance.tsv")
 samp  <- tb("samples.tsv")
+disc  <- tb("discordance.tsv")
 theme_set(theme_minimal(base_size = 12) + theme(panel.grid.minor = element_blank()))
 pal <- c(SNV = "#2c7fb8", INDEL = "#d95f0e")
 pct <- function(x, d = 2) ifelse(is.na(x), "", sprintf(paste0("%.", d, "f%%"), 100 * x))
@@ -33,18 +35,20 @@ pct <- function(x, d = 2) ifelse(is.na(x), "", sprintf(paste0("%.", d, "f%%"), 1
 ## 1. Summary
 
 ```{r verdict}
-overall <- if (all(crit$result %in% c("PASS", "INFO"))) "MEETS" else "DOES NOT MEET"
+failed  <- crit$criterion[crit$result == "FAIL"]
+overall <- if (length(failed) == 0) "meets all" else
+  sprintf("meets %d of %d", sum(crit$result == "PASS"), sum(crit$result %in% c("PASS", "FAIL")))
 ```
 
-The pipeline **`r overall`** the pre-defined acceptance criteria. All samples are reference material
+The pipeline **`r overall`** pre-defined acceptance criteria`r if (length(failed)) paste0(". Not met: ", paste(failed, collapse = "; "), ". See section 6 for the investigation and corrective action") else ""`. All samples are reference material
 from the Genome in a Bottle consortium, sequenced on Illumina HiSeq 2500 (2 x 148 bp) and benchmarked against the
 GIAB v4.2.1 truth sets inside GIAB high-confidence regions that overlap the panel.
 
 ```{r acceptance}
 crit %>%
-  mutate(observed = ifelse(grepl("^[0-9.]+$", observed) & as.numeric(observed) <= 1,
-                           pct(as.numeric(observed), 3), observed),
-         threshold = ifelse(grepl("^[0-9.]+$", threshold), pct(as.numeric(threshold), 2), threshold)) %>%
+  mutate(observed = ifelse(grepl("^[0-9.]+$", observed) & suppressWarnings(as.numeric(observed)) <= 1,
+                           pct(suppressWarnings(as.numeric(observed)), 4), paste0(observed, "x")),
+         threshold = ifelse(grepl("^[0-9.]+$", threshold), pct(suppressWarnings(as.numeric(threshold)), 2), threshold)) %>%
   select(Criterion = criterion, Observed = observed, `Acceptance` = threshold, Result = result, Detail = detail) %>%
   kable()
 ```
@@ -96,7 +100,8 @@ acc_typed %>%
   geom_point(size = 2.2, position = position_dodge(width = 0.5)) +
   facet_wrap(~metric) +
   scale_colour_manual(values = pal) +
-  scale_x_continuous(labels = percent_format(accuracy = 0.1)) +
+  scale_x_continuous(labels = percent_format(accuracy = 1), breaks = c(0.94, 0.96, 0.98, 1)) +
+  theme(panel.spacing.x = unit(1.5, "lines")) +
   labs(x = NULL, y = NULL, colour = NULL, title = "Per-run accuracy with 95% confidence intervals")
 ```
 
@@ -137,7 +142,15 @@ conc %>%
   labs(x = "Pairwise genotype concordance", y = NULL, colour = NULL)
 ```
 
-DISCORDANCE_NOTE
+### Discordant calls
+
+```{r discordance}
+disc %>%
+  transmute(Study = study, Calls = calls, N = n, `Median depth` = median_dp,
+            `Depth < 15` = pct(frac_dp_lt15, 1), `Depth < 20` = pct(frac_dp_lt20, 1),
+            `GQ < 20` = pct(frac_gq_lt20, 1)) %>%
+  kable()
+```
 
 ## 5. Depth titration (limit of detection)
 
@@ -162,7 +175,40 @@ titr %>%
   kable()
 ```
 
-## 6. Limitations
+## 6. Findings and corrective action
+
+```{r findings}
+rep_min  <- min(conc$concordance[conc$study == "repeatability"])
+d_disc   <- disc$frac_dp_lt15[disc$study == "repeatability" & disc$calls == "discordant"]
+d_conc   <- disc$frac_dp_lt15[disc$study == "repeatability" & disc$calls == "concordant"]
+qc30     <- samp %>% filter(study %in% c("repeatability", "reproducibility", "accuracy"))
+gate     <- samp %>% filter(study == "titration") %>% arrange(nominal_depth) %>%
+              filter(pct_target_20x >= 0.95) %>% slice(1)
+snv_lod  <- crit$observed[grepl("^Minimum depth", crit$criterion)]
+```
+
+**Finding 1: repeatability below target.** The lowest pairwise concordance between same-batch replicates was
+`r pct(rep_min)` against a target of 99%. Discordant calls are enriched for low read depth:
+`r pct(d_disc, 0)` of discordant calls have fewer than 15 reads, compared with `r pct(d_conc, 0)` of concordant calls.
+This points to random sampling of reads at ~30x rather than a systematic pipeline fault (the same replicates
+reach `r pct(min(acc$sensitivity[acc$type == "SNV" & acc$sample %in% qc30$sample]))` or better SNV sensitivity).
+
+**Finding 2: the 30x replicates do not meet the per-sample coverage gate.** Only
+`r pct(min(qc30$pct_target_20x), 1)` to `r pct(max(qc30$pct_target_20x), 1)` of target bases reach 20x,
+below the 95% requirement. In the titration series the gate is first met at
+`r gate$nominal_depth`x nominal depth (`r gate$observed_depth`x observed). SNV sensitivity reaches 99% from
+`r snv_lod`x.
+
+**Corrective action.** The acceptance criteria are not changed after the fact. Instead:
+
+1. Minimum sequencing depth for the assay is set to **`r round(gate$nominal_depth)`x mean target depth**, the lowest
+   level at which both the coverage gate and the sensitivity target are met.
+2. Repeatability and reproducibility must be repeated with replicates at that depth before the assay is released.
+   The GIAB data used here supports at most ~34x per same-batch replicate on this panel, so this needs new
+   sequencing of the reference material.
+3. Until then, calls with depth < 15 or GQ < 20 are flagged for manual review (query 6 in `sql/queries.sql`).
+
+## 7. Limitations
 
 * The panel covers 1.5 Mb of chr20, so indel counts are small and their confidence intervals are wide.
   A clinical validation would add more loci and more reference samples (for example HG003 to HG007) to reach the
