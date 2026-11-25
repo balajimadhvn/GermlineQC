@@ -4,6 +4,7 @@ Turn per-sample vcfeval results into CAP/NABL-style validation tables:
 
   accuracy.tsv         TP / FP / FN, sensitivity, PPV, F1, per-base specificity (95% Wilson CI)
   concordance.tsv      pairwise genotype concordance for repeatability and reproducibility sets
+  discordance.tsv      read depth / GQ of concordant vs discordant calls (root-cause analysis)
   titration.tsv        sensitivity / PPV by sequencing depth (limit of detection)
   acceptance.tsv       each acceptance criterion with observed value and PASS/FAIL
   samples.tsv          sample design + observed QC depth
@@ -75,21 +76,25 @@ def in_bed(regions, chrom: str, pos0: int) -> bool:
     return any(s <= pos0 < e for s, e in regions.get(chrom, ()))
 
 
-def pass_genotypes(vcf: Path, regions) -> dict[tuple, str]:
-    """PASS, non-reference calls inside the evaluation region -> {(chrom,pos,ref,alt): GT}."""
+def pass_genotypes(vcfs: list[Path], regions) -> dict[tuple, tuple[str, int, int]]:
+    """PASS, non-reference calls inside the evaluation region -> {(chrom,pos,ref,alt): (GT, DP, GQ)}."""
     calls = {}
-    with gzip.open(vcf, "rt") as fh:
-        for line in fh:
-            if line[0] == "#":
-                continue
-            f = line.rstrip("\n").split("\t")
-            if f[6] not in ("PASS", "."):
-                continue
-            gt = f[9].split(":")[0].replace("|", "/")
-            if gt in ("0/0", "./.", "."):
-                continue
-            if in_bed(regions, f[0], int(f[1]) - 1):
-                calls[(f[0], int(f[1]), f[3], f[4])] = "/".join(sorted(gt.split("/")))
+    for vcf in vcfs:
+        with gzip.open(vcf, "rt") as fh:
+            for line in fh:
+                if line[0] == "#":
+                    continue
+                f = line.rstrip("\n").split("\t")
+                if f[6] not in ("PASS", "."):
+                    continue
+                fmt = dict(zip(f[8].split(":"), f[9].split(":")))
+                gt = fmt.get("GT", "./.").replace("|", "/")
+                if gt in ("0/0", "./.", "."):
+                    continue
+                if in_bed(regions, f[0], int(f[1]) - 1):
+                    dp = int(fmt["DP"]) if fmt.get("DP", ".").isdigit() else 0
+                    gq = int(fmt["GQ"]) if fmt.get("GQ", ".").isdigit() else 0
+                    calls[(f[0], int(f[1]), f[3], f[4])] = ("/".join(sorted(gt.split("/"))), dp, gq)
     return calls
 
 
@@ -122,20 +127,35 @@ def accuracy(sample: str, vcfeval_dir: Path) -> list[dict]:
     return rows
 
 
-def concordance(group: str, samples: list[str], vcfs: dict[str, Path], regions) -> list[dict]:
+def concordance(group: str, samples: list[str], vcfs: dict[str, list[Path]], regions):
+    """Pairwise genotype concordance, plus depth/GQ of concordant vs discordant calls."""
     calls = {s: pass_genotypes(vcfs[s], regions) for s in samples}
-    rows = []
+    rows, quality = [], {"concordant": [], "discordant": []}
     for a, b in itertools.combinations(samples, 2):
         ca, cb = calls[a], calls[b]
         union = set(ca) | set(cb)
         both = set(ca) & set(cb)
-        gt_match = sum(1 for k in both if ca[k] == cb[k])
+        gt_match = sum(1 for k in both if ca[k][0] == cb[k][0])
+        for k in union:
+            x, y = ca.get(k), cb.get(k)
+            if x and y and x[0] == y[0]:
+                quality["concordant"].append(x)
+            else:
+                quality["discordant"].extend(v for v in (x, y) if v)
         lo, hi = wilson(gt_match, len(union))
         rows.append(dict(study=group, sample_a=a, sample_b=b, calls_a=len(ca), calls_b=len(cb),
                          shared=len(both), only_a=len(set(ca) - set(cb)), only_b=len(set(cb) - set(ca)),
                          genotype_match=gt_match, concordance=ratio(gt_match, len(union)),
                          conc_lo=lo, conc_hi=hi))
-    return rows
+    summary = []
+    for label, vals in quality.items():
+        if vals:
+            dps = sorted(v[1] for v in vals)
+            summary.append(dict(study=group, calls=label, n=len(vals), median_dp=dps[len(dps) // 2],
+                                frac_dp_lt15=sum(v[1] < 15 for v in vals) / len(vals),
+                                frac_dp_lt20=sum(v[1] < 20 for v in vals) / len(vals),
+                                frac_gq_lt20=sum(v[2] < 20 for v in vals) / len(vals)))
+    return rows, summary
 
 
 def write_tsv(path: Path, rows: list[dict]) -> None:
@@ -171,24 +191,18 @@ def main() -> None:
     write_tsv(a.outdir / "accuracy.tsv", acc)
 
     # concordance uses the vcfeval output calls (already restricted to eval regions, PASS only)
-    # vcfeval writes the call side as tp.vcf.gz + fp.vcf.gz; merge them for concordance
-    vcfs = {s: dirs[s] / "calls.vcf.gz" for s in dirs}
-    for s, d in dirs.items():
-        merged = d / "calls.vcf.gz"
-        if not merged.exists():
-            with gzip.open(merged, "wt") as out:
-                for part in ("tp.vcf.gz", "fp.vcf.gz"):
-                    with gzip.open(d / part, "rt") as fh:
-                        for line in fh:
-                            if line[0] != "#" or part == "tp.vcf.gz":
-                                out.write(line)
-    conc = []
+    # vcfeval's call side is split into tp.vcf.gz + fp.vcf.gz (PASS calls inside the evaluation region)
+    vcfs = {s: [dirs[s] / "tp.vcf.gz", dirs[s] / "fp.vcf.gz"] for s in dirs}
+    conc, disc = [], []
     for group in ("repeatability", "reproducibility"):
         members = sorted(s for s in dirs if design.get(s, {}).get("study") == group)
         if len(members) > 1:
             regions = read_bed(dirs[members[0]] / "eval.bed")
-            conc += concordance(group, members, vcfs, regions)
+            rows, summary = concordance(group, members, vcfs, regions)
+            conc += rows
+            disc += summary
     write_tsv(a.outdir / "concordance.tsv", conc)
+    write_tsv(a.outdir / "discordance.tsv", disc)
 
     titr = []
     for r in acc:

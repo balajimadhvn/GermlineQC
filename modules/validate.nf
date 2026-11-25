@@ -63,6 +63,5 @@ process VALIDATION_REPORT {
     """
     cp -L ${rmd} report.Rmd
     Rscript -e "rmarkdown::render('report.Rmd', output_file = 'validation_report.html', params = list(tables = '\$PWD/${tables}'), quiet = TRUE)"
-    mkdir -p figures && cp -L report_files/figure-html/*.png figures/ 2>/dev/null || true
     """
 }

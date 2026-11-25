@@ -56,6 +56,10 @@ def test_concordance_requires_matching_genotype(tmp_path):
     _vcf(a, [(10, "A", "G", "0/1"), (20, "C", "T", "1/1"), (30, "G", "A", "0/1")])
     _vcf(b, [(10, "A", "G", "1/0"), (20, "C", "T", "0/1"), (40, "T", "C", "0/1")])
     regions = {"chr20": [(0, 1000)]}
-    row = vm.concordance("repeatability", ["a", "b"], {"a": a, "b": b}, regions)[0]
+    rows, quality = vm.concordance("repeatability", ["a", "b"], {"a": [a], "b": [b]}, regions)
+    row = rows[0]
     assert row["shared"] == 2 and row["genotype_match"] == 1
     assert row["concordance"] == pytest.approx(1 / 4)
+    by_label = {q["calls"]: q for q in quality}
+    assert by_label["concordant"]["n"] == 1
+    assert by_label["discordant"]["n"] == 4
