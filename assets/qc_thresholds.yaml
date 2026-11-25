@@ -1,11 +1,13 @@
 # Per-sample QC acceptance criteria (panel / targeted DNA sequencing).
 # FAIL blocks reporting; WARN needs a reviewer sign-off.
+# v1.0.0: mean_target_depth raised from 20x to 50x after validation (report section 6:
+# below ~50x the 20x-coverage gate is not met and replicate concordance drops).
 q30_rate:              {min: 0.80}
 reads_passing_filter:  {min: 0.90}
 mapped_rate:           {min: 0.98}
 properly_paired_rate:  {min: 0.90}
 duplication_rate:      {max: 0.30, level: warn}
-mean_target_depth:     {min: 20}
+mean_target_depth:     {min: 50}
 pct_target_10x:        {min: 0.98}
 pct_target_20x:        {min: 0.95}
 ts_tv:                 {min: 1.8, max: 2.6, level: warn}

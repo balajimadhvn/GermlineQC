@@ -4,11 +4,12 @@
 **Pipeline:** GermlineQC v1.0.0 (BWA-MEM 0.7.18, GATK 4.6.1.0, SnpEff 5.2, RTG Tools 3.12.1)
 **Document ID:** GQC-VP-001, version 1.0
 
-This plan follows the structure that CAP (molecular pathology checklist, MOL.3xxxx items on test validation and
-bioinformatics) and NABL (ISO 15189:2022, clause 7.3 on validation of examination procedures) expect from a
-laboratory developed NGS test. The requirements it draws on are summarised in the joint AMP/CAP guidelines for
-validating NGS bioinformatics pipelines (Roy et al., *J Mol Diagn* 2018) and the earlier AMP/CAP guidance
-on targeted NGS panels (Jennings et al., *J Mol Diagn* 2017).
+This plan follows the structure that CAP (Molecular Pathology checklist requirements for NGS test validation and
+bioinformatics) and NABL (ISO 15189:2022, clause 7.3.3 on validation of examination methods) expect from a
+laboratory developed NGS test. The pipeline-specific requirements follow the joint AMP/CAP recommendations for
+validating NGS bioinformatics pipelines (Roy et al., *J Mol Diagn* 2018). The study design (accuracy,
+precision, limit of detection, reference materials, sample size by the rule of three) borrows from the AMP/CAP
+guidance on NGS panel validation (Jennings et al., *J Mol Diagn* 2017), applied here to germline variants.
 
 ## 1. Scope
 
@@ -81,7 +82,7 @@ See `assets/qc_thresholds.yaml`. A sample that fails any metric is not reported 
 | Mapped reads | >= 98% | Contamination, wrong species, wrong reference |
 | Properly paired | >= 90% | Library insert problems |
 | Duplication | <= 30% (warning) | Low library complexity |
-| Mean target depth | >= 20x | Sensitivity (see LoD) |
+| Mean target depth | >= 50x (raised from 20x after validation) | Sensitivity and precision (see LoD and report section 6) |
 | Target bases >= 20x | >= 95% | Reportable range |
 | Ts/Tv | 1.8 to 2.6 (warning) | Systematic false positives shift Ts/Tv |
 

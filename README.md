@@ -50,7 +50,8 @@ low-depth calls (22% have fewer than 15 reads, against 3% of concordant calls). 
 miss the per-sample coverage gate: only about 90% of target bases reach 20x, against the required 95%. The
 depth titration shows the gate is first met at 50x, where SNV and indel sensitivity are both 100% on this panel.
 So the problem is read sampling at 30x, not the caller. The corrective action is to set the assay's
-minimum depth to 50x and repeat the precision studies at that depth. The acceptance criteria were not
+minimum depth to 50x (now enforced by the QC gate in `assets/qc_thresholds.yaml`) and repeat the precision
+studies at that depth. The acceptance criteria were not
 loosened after seeing the data. Details are in section 6 of the report.
 
 ## What is in the repo
@@ -78,7 +79,7 @@ cd GermlineQC
 mamba env create -f environment.yml
 conda activate germlineqc
 
-# about 2 minutes: bundled 80 kb JAG1 slice, ~35x real HG001 reads
+# about 2 minutes: bundled 80 kb JAG1 slice, ~70x real HG001 reads
 nextflow run main.nf -profile test,local
 python -m pytest
 ```
