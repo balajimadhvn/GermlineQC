@@ -1,0 +1,33 @@
+name: germlineqc
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - nextflow=24.10.4
+  - openjdk=17
+  - fastp=0.24.0
+  - fastqc=0.12.1
+  - bwa=0.7.18
+  - samtools=1.21
+  - bcftools=1.21
+  - htslib=1.21
+  - gatk4=4.6.1.0
+  - mosdepth=0.3.10
+  - snpeff=5.2
+  - rtg-tools=3.12.1
+  - multiqc=1.25.1
+  - python=3.11
+  - pandas=2.2
+  - pytest=8.3
+  - pyyaml
+  - sqlite
+  - r-base=4.4
+  - r-ggplot2
+  - r-dplyr
+  - r-tidyr
+  - r-readr
+  - r-rmarkdown
+  - r-knitr
+  - r-rsqlite
+  - r-scales
+  - pandoc
