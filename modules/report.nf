@@ -36,7 +36,7 @@ process LOAD_SQLITE {
 
     script:
     """
-    acmg_opt=\$(ls *.acmg.tsv 2>/dev/null | xargs -r echo --acmg)
+    acmg_opt=\$( (ls *.acmg.tsv 2>/dev/null || true) | xargs -r echo --acmg)
     load_sqlite.py --schema ${projectDir}/sql/schema.sql --db variants.db --variants ${tsvs} --qc ${qc_jsons} \$acmg_opt
     sqlite3 -header -column variants.db < ${projectDir}/sql/queries.sql > example_queries.txt
     """
