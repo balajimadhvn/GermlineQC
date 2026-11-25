@@ -26,8 +26,11 @@ FASTQ ─ fastp ─ BWA-MEM ─ MarkDuplicates ─ BQSR ─ HaplotypeCaller (GVC
 
 15 runs of GIAB reference material (HG001 and HG002, Illumina HiSeq 2500, 2 x 148 bp) over a 1.5 Mb chr20
 panel covering the *JAG1* and *GNAS* loci, scored inside GIAB v4.2.1 high-confidence regions.
-Full report: [`validation/validation_report.html`](validation/validation_report.html)
-(download and open, or view the tables in [`validation/`](validation)).
+
+
+**[View the full validation report](https://balajimadhvn.github.io/GermlineQC/validation/validation_report.html)**
+&nbsp;·&nbsp; [MultiQC report for all 15 runs](https://balajimadhvn.github.io/GermlineQC/validation/multiqc_report.html)
+&nbsp;·&nbsp; [result tables](validation)
 
 | Criterion | Observed | 95% CI lower bound | Target | Result |
 |---|---|---|---|---|
