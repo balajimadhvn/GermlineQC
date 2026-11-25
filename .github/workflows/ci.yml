@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-file: environment.yml
+          cache-environment: true
+
+      - name: Unit tests (Python)
+        run: python -m pytest -v
+
+      - name: Pipeline test profile
+        run: nextflow run main.nf -profile test,local -ansi-log false
+
+      - name: Check outputs
+        run: |
+          test -s results_test/sampleA/annotated/sampleA.annotated.vcf.gz
+          test -s results_test/database/variants.db
+          test -s results_test/multiqc/multiqc_report.html
+          python - <<'PY'
+          import json, sys
+          qc = json.load(open("results_test/sampleA/qc/sampleA.qc.json"))
+          print("QC:", qc["overall"])
+          sys.exit(qc["overall"] != "PASS")
+          PY
+          sqlite3 results_test/database/variants.db "SELECT COUNT(*) FROM variants WHERE filter='PASS';"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            results_test/multiqc/multiqc_report.html
+            results_test/database/example_queries.txt
+            results_test/sampleA/qc/
