@@ -1,0 +1,27 @@
+# Thresholds for bin/acmg_classify.py. Set before benchmarking and not tuned to the benchmark.
+#
+# Population frequency uses gnomAD v4.1 "fafmax_faf95_max" (filtering allele frequency, the 95% lower
+# confidence bound of the highest ancestry-group frequency), as recommended by ClinGen SVI.
+# Inheritance comes from the ClinGen haploinsufficiency score: 3 -> dominant, 30 -> recessive.
+
+BA1_faf: 0.05            # ClinGen SVI (Ghosh et al. 2018)
+
+BS1_faf:                 # greater than expected for the disorder
+  dominant:  0.001
+  recessive: 0.01
+  unknown:   0.005
+
+PM2_max_af:              # "absent or extremely low"; applied at Supporting strength (ClinGen SVI 2020)
+  dominant:  0.00001
+  recessive: 0.0001
+  unknown:   0.00001
+
+# REVEL thresholds calibrated by Pejaver et al. 2022 (ClinGen SVI). Checked from strongest to weakest.
+PP3_revel:
+  Strong:     0.932
+  Moderate:   0.773
+  Supporting: 0.644
+BP4_revel:
+  Strong:     0.016      # 0.003 would be "very strong"; capped at Strong
+  Moderate:   0.183
+  Supporting: 0.290

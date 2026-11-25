@@ -38,6 +38,10 @@ nextflow run main.nf \
 4. Variants returned by query 6 (low GQ, low depth or skewed allele fraction) need IGV review and, if
    reportable, orthogonal confirmation (e.g. Sanger) before release.
 
+5. If the run used `-profile acmg`, open `<sample>/acmg/<sample>.acmg.tsv` (or query 9 in `sql/queries.sql`).
+   Every Pathogenic, Likely pathogenic or VUS call goes to a variant scientist for full curation. The
+   automated class is a starting point and is never released without that review.
+
 ## 5. Outputs to archive
 
 | File | Retention |
@@ -47,6 +51,7 @@ nextflow run main.nf \
 | `<sample>/qc/` | permanent |
 | `pipeline_info/` (trace, timeline, report) | permanent |
 | `multiqc/` | permanent |
+| `<sample>/acmg/` (when classification was run) | permanent |
 
 ## 6. Deviations
 

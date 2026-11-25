@@ -108,3 +108,25 @@ parameters and execution trace for the audit trail.
 | Raw comparison output | `results_validation/validation/vcfeval/<sample>/` |
 | Summary tables | `results_validation/validation/tables/` |
 | Signed report | `results_validation/validation/validation_report.html` (copy in `validation/`) |
+| ACMG benchmark | `results/acmg_benchmark/` (copy in `validation/acmg/`) |
+
+## 8. Variant classification (ACMG/AMP)
+
+`bin/acmg_classify.py` is validated separately from the calling pipeline, because its errors are different:
+a correct genotype can still be given the wrong clinical class.
+
+| Item | Choice |
+|---|---|
+| Truth | ClinVar records with at least two review stars (multiple submitters, no conflicts, or expert panel), germline, SNV or indel up to 50 bp, on chr20 |
+| Collapsed classes | P/LP and B/LB on both sides; predicted VUS is counted separately |
+| Independence | the variant's own ClinVar record is never used as evidence for itself (`--exclude-self`) |
+| Metrics | same-direction rate, VUS rate and opposite-direction rate per truth class, with Wilson 95% intervals; the same broken down by consequence type and by criterion |
+| Thresholds | `assets/acmg_rules.yaml`, taken from ClinGen SVI publications and not tuned to the benchmark |
+
+The opposite-direction rate (a ClinVar P/LP variant called B/LB, or the reverse) is the safety metric and
+every such call is listed for review in `discordant.tsv`. A VUS result is safe but unhelpful. The engine is a
+triage step: every classification still goes to a variant scientist, who adds the case-level criteria the
+engine does not score (PS2, PS3, PS4, PM3, PM6, PP1, PP4, BS2, BS3, BS4, BP2, BP5).
+
+A change to any of the following needs the benchmark to be re-run and compared with the previous version:
+a rule threshold, the gnomAD or REVEL release, the ClinGen dosage list, or the SnpEff transcript set.

@@ -1,0 +1,119 @@
+---
+title: "ACMG/AMP Classifier Benchmark"
+subtitle: "GermlineQC rule engine vs ClinVar consensus (>= 2 review stars), chr20"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    df_print: kable
+    self_contained: true
+params:
+  tables: "tables"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,
+                      fig.width = 8, fig.height = 4.2, dpi = 120, dev = "png", fig.path = "figures/")
+suppressPackageStartupMessages({
+  library(readr); library(dplyr); library(tidyr); library(ggplot2); library(scales); library(knitr)
+})
+tb <- function(name) read_tsv(file.path(params$tables, name), show_col_types = FALSE)
+summ <- tb("summary.tsv"); conf <- tb("confusion.tsv"); csq <- tb("by_consequence.tsv")
+crit <- tb("criteria.tsv"); disc <- tb("discordant.tsv")
+theme_set(theme_minimal(base_size = 12) + theme(panel.grid.minor = element_blank()))
+pct <- function(x, d = 1) ifelse(is.na(x), "", sprintf(paste0("%.", d, "f%%"), 100 * x))
+tier_cols <- c("Pathogenic" = "#b2182b", "Likely pathogenic" = "#ef8a62", "Uncertain significance" = "#bdbdbd",
+               "Likely benign" = "#67a9cf", "Benign" = "#2166ac")
+```
+
+## What was tested
+
+`bin/acmg_classify.py` applies the ACMG/AMP criteria that can be evaluated from data
+(PVS1, PS1, PM2, PM4, PM5, PP3, BA1, BS1, BP4, BP7) and combines them with the ClinGen SVI point system.
+Evidence: gnomAD v4.1 exomes and genomes, REVEL (ClinGen-calibrated thresholds), ClinGen haploinsufficiency
+scores and other ClinVar pathogenic missense variants (PS1/PM5).
+
+The truth set is every chr20 ClinVar variant whose classification has at least two review stars
+(multiple submitters with no conflicts, expert panel or practice guideline). A variant's own ClinVar record
+is never used as evidence for it. Thresholds were fixed before the benchmark was run
+(`assets/acmg_rules.yaml`).
+
+## Headline numbers
+
+```{r summary}
+summ %>%
+  transmute(`ClinVar class` = truth, Variants = comma(n),
+            `Same direction` = sprintf("%s (%s-%s)", pct(concordance), pct(conc_lo), pct(conc_hi)),
+            VUS = pct(vus_rate),
+            `Opposite direction` = sprintf("%s (%s-%s)", pct(opposite_rate, 2), pct(opp_lo, 2), pct(opp_hi, 2))) %>%
+  kable()
+```
+
+```{r confusion-plot, fig.height = 3}
+conf %>%
+  group_by(truth) %>% mutate(frac = n / sum(n)) %>% ungroup() %>%
+  mutate(predicted = factor(predicted, levels = rev(names(tier_cols))),
+         truth = factor(truth, levels = c("B/LB", "P/LP"), labels = c("ClinVar B/LB", "ClinVar P/LP"))) %>%
+  ggplot(aes(x = frac, y = truth, fill = predicted)) +
+  geom_col(width = 0.6) +
+  scale_fill_manual(values = tier_cols, breaks = names(tier_cols)) +
+  scale_x_continuous(labels = percent_format()) +
+  labs(x = "Share of ClinVar variants", y = NULL, fill = "Rule engine")
+```
+
+## By variant consequence
+
+```{r consequence}
+csq %>%
+  transmute(Consequence = consequence, `ClinVar` = truth, N = n, `Same direction` = pct(concordance),
+            VUS = pct(vus_rate), Opposite = pct(opposite_rate, 2)) %>%
+  kable()
+```
+
+```{r consequence-plot, fig.height = 4.5}
+csq %>%
+  select(consequence, truth, n, concordance, vus_rate, opposite_rate) %>%
+  pivot_longer(c(concordance, vus_rate, opposite_rate), names_to = "outcome", values_to = "rate") %>%
+  mutate(outcome = factor(outcome, levels = c("opposite_rate", "vus_rate", "concordance"),
+                          labels = c("Opposite", "VUS", "Same direction")),
+         label = paste0(consequence, " (n=", n, ")")) %>%
+  ggplot(aes(x = rate, y = label, fill = outcome)) +
+  geom_col() + facet_wrap(~truth, scales = "free_y") +
+  scale_fill_manual(values = c("Same direction" = "#1b9e77", VUS = "#bdbdbd", Opposite = "#d95f02")) +
+  scale_x_continuous(labels = percent_format()) +
+  labs(x = NULL, y = NULL, fill = NULL)
+```
+
+## Which criteria fired
+
+```{r criteria-plot, fig.height = 3.8}
+crit %>%
+  mutate(criterion = factor(criterion, levels = rev(sort(unique(criterion))))) %>%
+  ggplot(aes(x = n, y = criterion, fill = truth)) +
+  geom_col(position = "dodge") +
+  scale_fill_manual(values = c("P/LP" = "#b2182b", "B/LB" = "#2166ac")) +
+  scale_x_continuous(labels = comma) +
+  labs(x = "Variants", y = NULL, fill = "ClinVar")
+```
+
+## Opposite-direction calls
+
+These are the errors that matter most, and each one is listed for review.
+
+```{r discordant}
+if ("note" %in% names(disc)) cat(disc$note[1]) else
+  disc %>% select(gene, hgvs_p, consequence, gnomad_faf, revel, criteria, predicted, clinvar) %>% kable()
+```
+
+## Interpretation and limits
+
+* Most criteria that need case-level or functional data (segregation, de novo status, functional studies,
+  phenotype specificity, hotspot domains) cannot be automated, so many truly pathogenic variants stop at VUS.
+  That is the expected, conservative failure mode. A rule engine like this prioritises variants for a
+  scientist's review and does not replace that review.
+* ClinVar submitters also use gnomAD frequencies, so population-based criteria are not fully independent of
+  the truth labels. Benign concordance is therefore an upper bound.
+* No splicing predictor (e.g. SpliceAI) is included, so PP3/BP4 are not applied to non-missense variants and
+  BP7 is applied to synonymous variants without a splicing check.
+* The most severe SnpEff consequence across protein-coding transcripts is used, not the MANE Select transcript.

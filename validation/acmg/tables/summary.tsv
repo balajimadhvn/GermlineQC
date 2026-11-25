@@ -1,0 +1,3 @@
+truth	n	concordant	vus	opposite	concordance	conc_lo	conc_hi	vus_rate	opposite_rate	opp_lo	opp_hi
+P/LP	1391	511	878	2	0.3674	0.3424	0.3930	0.6312	0.0014	0.0004	0.0052
+B/LB	8080	6098	1982	0	0.7547	0.7452	0.7640	0.2453	0.0000	0.0000	0.0005

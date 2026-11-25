@@ -10,6 +10,10 @@ with the analytical validation a clinical lab needs before it can use one: accur
 repeatability, between-run reproducibility and a depth-based limit of detection. Acceptance criteria were
 set up front and the results are reported against them, including the one criterion the data did not meet.
 
+Variants are then classified under the ACMG/AMP guidelines by a rule engine that uses the ClinGen points
+system, and that engine is benchmarked against expert-reviewed ClinVar classifications. HLA typing of the
+same GIAB sample lives in the companion repo [GIAB-HLA](https://github.com/balajimadhvn/GIAB-HLA).
+
 ```
 FASTQ ─ fastp ─ BWA-MEM ─ MarkDuplicates ─ BQSR ─ HaplotypeCaller (GVCF) ─ GenotypeGVCFs
                                    │                                             │
@@ -18,6 +22,8 @@ FASTQ ─ fastp ─ BWA-MEM ─ MarkDuplicates ─ BQSR ─ HaplotypeCaller (GVC
                               QC gates (PASS/FAIL)                      SnpEff + ClinVar annotation
                                    └───────────────┬─────────────────────────────┘
                                          SQLite variant store, MultiQC
+                                                   │
+                         ACMG/AMP classification (gnomAD, REVEL, ClinGen, ClinVar) → benchmark vs ClinVar
                                                    │
                          validation: RTG vcfeval vs GIAB → Python metrics → R Markdown report
 ```
@@ -57,6 +63,57 @@ minimum depth to 50x (now enforced by the QC gate in `assets/qc_thresholds.yaml`
 studies at that depth. The acceptance criteria were not
 loosened after seeing the data. Details are in section 6 of the report.
 
+## ACMG/AMP classification
+
+`bin/acmg_classify.py` assigns each variant the ACMG/AMP criteria it can evaluate from public data, then
+combines them with the ClinGen points system (Tavtigian et al. 2020: supporting 1, moderate 2, strong 4,
+very strong 8; ≥ 10 pathogenic, 6 to 9 likely pathogenic, 0 to 5 VUS, −1 to −6 likely benign, ≤ −7 benign).
+
+| Criterion | Evidence used | Rule |
+|---|---|---|
+| PVS1 | SnpEff consequence + ClinGen haploinsufficiency score | Null variant in a gene where loss of function causes disease; Strong in the last exon, Moderate for start-loss |
+| PS1 / PM5 | ClinVar (≥ 1 star) | Same amino-acid change, or another missense change at the same residue, already classified P/LP |
+| PM2 (Supporting) | gnomAD v4.1 exomes + genomes | Absent or below the inheritance-specific ceiling |
+| PM4 | SnpEff | In-frame indel or stop-loss |
+| PP3 / BP4 | REVEL | Pejaver et al. 2022 calibrated thresholds, Supporting to Strong |
+| BA1 / BS1 | gnomAD filtering allele frequency (FAF95, ancestry max) | 5%, and a gene-inheritance-specific threshold |
+| BP7 | SnpEff | Synonymous, outside splice regions |
+
+All thresholds are in [`assets/acmg_rules.yaml`](assets/acmg_rules.yaml) and were fixed before the benchmark
+was run. Criteria that need case-level information (segregation, de novo status, phenotype, functional
+studies) are deliberately not scored, so the engine is a first-pass triage tool for a variant scientist and
+not a sign-out.
+
+### Benchmark against ClinVar
+
+The truth set is every chr20 ClinVar germline SNV or small indel (≤ 50 bp) classified P/LP or B/LB with at
+least 2 review stars: 9,471 variants (1,391 P/LP, 8,080 B/LB). Each variant's own ClinVar record is
+excluded when PS1/PM5 are evaluated (`--exclude-self`). Without that, the truth label would leak into the
+evidence.
+
+| ClinVar | n | Same direction | VUS | Opposite direction |
+|---|---|---|---|---|
+| P/LP | 1,391 | 511 (36.7%, 34.2-39.3) | 878 (63.1%) | 2 (0.14%, 0.04-0.52) |
+| B/LB | 8,080 | 6,098 (75.5%, 74.5-76.4) | 1,982 (24.5%) | 0 (0%, 0-0.05) |
+
+95% Wilson intervals in brackets.
+
+- **Safety:** 2 of 9,471 variants were called in the opposite direction to ClinVar, and no benign
+  variant was called P/LP. Both errors are ClinVar P/LP missense variants (CFAP61, HNF4A) with low REVEL scores
+  (0.12 and 0.16), so BP4 fired. These are the cases where a variant scientist's review catches what
+  in-silico evidence misses.
+- **Where it stops at VUS:** null variants reach LP in 45% of cases. Missense variants reach LP in 24%:
+  without segregation, de novo or functional evidence, PM2 + PP3 reach at most 5 points. Intronic,
+  splice-region and in-frame P/LP variants all stay VUS, because no splicing predictor is used.
+- **Benign side:** synonymous (BP7) and missense (BP4, BS1) variants reach B/LB 81% and 85% of the time.
+  The frequency criteria are not fully independent of ClinVar, whose submitters also read gnomAD, so read
+  these as upper bounds.
+- No variant reached Pathogenic. The Pathogenic tier needs very strong evidence plus case-level data that a
+  rule engine cannot see.
+
+**[View the ACMG benchmark report](https://balajimadhvn.github.io/GermlineQC/validation/acmg/acmg_report.html)**
+&nbsp;·&nbsp; [result tables](validation/acmg)
+
 ## What is in the repo
 
 | Path | What it does |
@@ -69,7 +126,9 @@ loosened after seeing the data. Details are in section 6 of the report.
 | [`bin/load_sqlite.py`](bin/load_sqlite.py), [`sql/`](sql) | SQLite schema, a `reportable` view and seven review queries ([results](validation/sql_query_results.txt)) |
 | [`reports/validation_report.Rmd`](reports/validation_report.Rmd) | R Markdown validation report (ggplot2, dplyr, tidyr) |
 | [`reports/cohort_summary.R`](reports/cohort_summary.R) | R script that queries the SQLite store through DBI/RSQLite |
-| [`scripts/`](scripts) | GIAB data download, replicate design, determinism check |
+| [`bin/acmg_classify.py`](bin/acmg_classify.py) | ACMG/AMP rule engine (ClinGen points), thresholds in [`assets/acmg_rules.yaml`](assets/acmg_rules.yaml) |
+| [`bin/acmg_benchmark.py`](bin/acmg_benchmark.py), [`reports/acmg_report.Rmd`](reports/acmg_report.Rmd) | Concordance with ClinVar ≥ 2-star classifications, by consequence and by criterion |
+| [`scripts/`](scripts) | GIAB data download, replicate design, determinism check, ACMG evidence download |
 | [`docs/VALIDATION_PLAN.md`](docs/VALIDATION_PLAN.md) | Validation plan: scope, reference materials, metrics, acceptance criteria, sample size, revalidation triggers |
 | [`docs/SOP.md`](docs/SOP.md) | Operating procedure for running the pipeline and reviewing QC before release |
 | [`tests/`](tests) | pytest unit tests and an 80 kb test dataset of real HG001 reads |
@@ -101,6 +160,16 @@ nextflow run main.nf -entry VALIDATION -profile validation,local
 
 The full run (15 samples) takes about an hour on a laptop with the default limit of 8 CPUs and 6.5 GB RAM
 (`conf/base.config`). Raise the limits there on a bigger machine.
+
+### Reproduce the ACMG benchmark
+
+```bash
+./scripts/fetch_acmg_resources.sh data  # ClinVar, gnomAD v4.1 and REVEL for chr20, ClinGen gene list
+nextflow run main.nf -entry ACMG_BENCHMARK_RUN -profile acmg,local
+```
+
+Add `-profile acmg` to a normal run to classify every sample's variants; the classes are written to
+`<sample>/acmg/<sample>.acmg.tsv` and loaded into the `acmg` table of the SQLite store.
 
 ### Your own data
 
@@ -143,7 +212,8 @@ discussed in the report and the validation plan.
 ## Data sources
 
 GIAB HG001/HG002 reads and v4.2.1 benchmarks (NIST), GRCh38 chr20 (UCSC), Ensembl release 113 gene models,
-ClinVar (NCBI), GATK hg38 resource bundle (Broad Institute). All are public.
+ClinVar (NCBI), GATK hg38 resource bundle (Broad Institute), gnomAD v4.1 (Broad Institute), REVEL v1.3,
+ClinGen gene curation list. All are public.
 
 ## License
 

@@ -1,6 +1,8 @@
 -- GermlineQC variant store
 PRAGMA foreign_keys = ON;
 
+DROP VIEW IF EXISTS reportable;
+DROP TABLE IF EXISTS acmg;
 DROP TABLE IF EXISTS variants;
 DROP TABLE IF EXISTS qc_metrics;
 DROP TABLE IF EXISTS samples;
@@ -51,6 +53,26 @@ CREATE TABLE variants (
 CREATE INDEX idx_variants_locus  ON variants(chrom, pos);
 CREATE INDEX idx_variants_gene   ON variants(gene);
 CREATE INDEX idx_variants_impact ON variants(impact);
+
+-- ACMG/AMP classification from bin/acmg_classify.py
+CREATE TABLE acmg (
+    sample_id   TEXT NOT NULL REFERENCES samples(sample_id),
+    chrom       TEXT NOT NULL,
+    pos         INTEGER NOT NULL,
+    ref         TEXT NOT NULL,
+    alt         TEXT NOT NULL,
+    gene        TEXT,
+    consequence TEXT,
+    hgvs_c      TEXT,
+    hgvs_p      TEXT,
+    gnomad_faf  REAL,
+    revel       REAL,
+    criteria    TEXT,
+    points      INTEGER,
+    acmg_class  TEXT CHECK (acmg_class IN ('Pathogenic', 'Likely pathogenic', 'Uncertain significance',
+                                           'Likely benign', 'Benign')),
+    PRIMARY KEY (sample_id, chrom, pos, ref, alt)
+);
 
 -- convenience view: PASS variants with a reportable consequence
 CREATE VIEW reportable AS

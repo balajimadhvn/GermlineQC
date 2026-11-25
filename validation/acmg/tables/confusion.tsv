@@ -1,0 +1,11 @@
+truth	predicted	n
+P/LP	Pathogenic	0
+P/LP	Likely pathogenic	511
+P/LP	Uncertain significance	878
+P/LP	Likely benign	2
+P/LP	Benign	0
+B/LB	Pathogenic	0
+B/LB	Likely pathogenic	0
+B/LB	Uncertain significance	1982
+B/LB	Likely benign	4321
+B/LB	Benign	1777

@@ -28,6 +28,7 @@ def main() -> None:
     ap.add_argument("--db", type=Path, required=True)
     ap.add_argument("--variants", type=Path, nargs="+", required=True)
     ap.add_argument("--qc", type=Path, nargs="+", required=True)
+    ap.add_argument("--acmg", type=Path, nargs="*", default=[], help="acmg_classify.py output tables")
     a = ap.parse_args()
 
     con = sqlite3.connect(a.db)
@@ -51,8 +52,21 @@ def main() -> None:
             rows = [[cast(c, r[c]) for c in cols] for r in reader]
             con.executemany(sql, rows)
             n += len(rows)
+    acmg_cols = ["sample_id", "chrom", "pos", "ref", "alt", "gene", "consequence", "hgvs_c", "hgvs_p",
+                 "gnomad_faf", "revel", "criteria", "points", "acmg_class"]
+    n_acmg = 0
+    for tsv in a.acmg:
+        with tsv.open() as fh:
+            rows = [[r["sample"], r["chrom"], int(r["pos"]), r["ref"], r["alt"], r["gene"], r["consequence"],
+                     r["hgvs_c"], r["hgvs_p"], float(r["gnomad_faf"]) if r["gnomad_faf"] else None,
+                     float(r["revel"]) if r["revel"] else None, r["criteria"],
+                     int(r["points"]) if r["points"] else None, r["acmg_class"]]
+                    for r in csv.DictReader(fh, delimiter="\t")]
+        con.executemany(f"INSERT OR REPLACE INTO acmg({', '.join(acmg_cols)}) VALUES ({', '.join('?' * len(acmg_cols))})", rows)
+        n_acmg += len(rows)
     con.commit()
-    print(f"loaded {n} variants from {len(a.variants)} samples into {a.db}")
+    print(f"loaded {n} variants from {len(a.variants)} samples into {a.db}"
+          + (f"; {n_acmg} ACMG classifications" if a.acmg else ""))
 
 
 if __name__ == "__main__":

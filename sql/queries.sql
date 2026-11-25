@@ -55,3 +55,20 @@ SELECT CASE WHEN n_samples = (SELECT COUNT(*) FROM samples) THEN 'all samples'
        COUNT(*) AS variants
 FROM per_variant
 GROUP BY category;
+
+-- 8. ACMG classes per sample (only when the ACMG module ran)
+SELECT sample_id, acmg_class, COUNT(*) AS variants
+FROM acmg
+GROUP BY sample_id, acmg_class
+ORDER BY sample_id, CASE acmg_class WHEN 'Pathogenic' THEN 1 WHEN 'Likely pathogenic' THEN 2
+         WHEN 'Uncertain significance' THEN 3 WHEN 'Likely benign' THEN 4 ELSE 5 END;
+
+-- 9. Variants needing review: P/LP or VUS with coding impact, joined to call quality
+SELECT a.sample_id, a.gene, a.hgvs_c, a.hgvs_p, a.criteria, a.acmg_class, v.depth, v.gq, v.vaf
+FROM acmg a
+JOIN variants v USING (sample_id, chrom, pos, ref, alt)
+WHERE a.acmg_class IN ('Pathogenic', 'Likely pathogenic')
+   OR (a.acmg_class = 'Uncertain significance' AND a.consequence NOT LIKE '%intron%'
+       AND a.consequence NOT LIKE '%UTR%' AND a.consequence != '')
+ORDER BY a.acmg_class, a.gene
+LIMIT 25;
