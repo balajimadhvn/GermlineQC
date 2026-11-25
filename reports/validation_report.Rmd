@@ -1,0 +1,176 @@
+---
+title: "Analytical Validation Report: Germline SNV/Indel Panel"
+subtitle: "GermlineQC v1.0.0 &middot; GIAB HG001 / HG002 &middot; chr20 panel (JAG1, GNAS loci)"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    df_print: kable
+    self_contained: true
+params:
+  tables: "tables"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,
+                      fig.width = 8, fig.height = 4.2, dpi = 120, dev = "png")
+suppressPackageStartupMessages({
+  library(readr); library(dplyr); library(tidyr); library(ggplot2); library(scales); library(knitr)
+})
+tb <- function(name) read_tsv(file.path(params$tables, name), show_col_types = FALSE)
+
+acc   <- tb("accuracy.tsv")
+conc  <- tb("concordance.tsv")
+titr  <- tb("titration.tsv")
+crit  <- tb("acceptance.tsv")
+samp  <- tb("samples.tsv")
+theme_set(theme_minimal(base_size = 12) + theme(panel.grid.minor = element_blank()))
+pal <- c(SNV = "#2c7fb8", INDEL = "#d95f0e")
+pct <- function(x, d = 2) ifelse(is.na(x), "", sprintf(paste0("%.", d, "f%%"), 100 * x))
+```
+
+## 1. Summary
+
+```{r verdict}
+overall <- if (all(crit$result %in% c("PASS", "INFO"))) "MEETS" else "DOES NOT MEET"
+```
+
+The pipeline **`r overall`** the pre-defined acceptance criteria. All samples are reference material
+from the Genome in a Bottle consortium, sequenced on Illumina HiSeq 2500 (2 x 148 bp) and benchmarked against the
+GIAB v4.2.1 truth sets inside GIAB high-confidence regions that overlap the panel.
+
+```{r acceptance}
+crit %>%
+  mutate(observed = ifelse(grepl("^[0-9.]+$", observed) & as.numeric(observed) <= 1,
+                           pct(as.numeric(observed), 3), observed),
+         threshold = ifelse(grepl("^[0-9.]+$", threshold), pct(as.numeric(threshold), 2), threshold)) %>%
+  select(Criterion = criterion, Observed = observed, `Acceptance` = threshold, Result = result, Detail = detail) %>%
+  kable()
+```
+
+## 2. Study design
+
+| Study | Question answered | Samples |
+|---|---|---|
+| Accuracy | Does the assay call the right variants? | every HG001 run at 30x + HG002 at 30x |
+| Repeatability | Same library, same instrument, short time window: do replicates agree? | 3 disjoint read subsets |
+| Reproducibility | Different sequencing runs, instruments and dates (Dec 2013 to Apr 2014) | 4 independent runs |
+| Depth titration | Lowest depth at which SNV sensitivity stays above target (limit of detection) | 5x to 100x |
+
+```{r samples}
+samp %>%
+  mutate(pct_target_20x = pct(pct_target_20x, 1)) %>%
+  select(Sample = sample, Study = study, Material = reference_material, Source = source,
+         `Nominal depth` = nominal_depth, `Observed depth` = observed_depth,
+         `Target >= 20x` = pct_target_20x, QC = qc_status) %>%
+  kable()
+```
+
+## 3. Accuracy
+
+Sensitivity = TP / (TP + FN), PPV = TP / (TP + FP), both with 95% Wilson score intervals.
+Genotype must match for a call to count as a true positive (RTG vcfeval, haplotype-aware comparison).
+
+```{r accuracy-table}
+acc_typed <- acc %>% filter(type != "ALL") %>% left_join(samp %>% select(sample, study), by = "sample")
+acc_typed %>%
+  filter(study %in% c("accuracy", "repeatability", "reproducibility")) %>%
+  transmute(Sample = sample, Type = type, TP = tp, FP = fp, FN = fn,
+            Sensitivity = sprintf("%s (%s-%s)", pct(sensitivity), pct(sens_lo), pct(sens_hi)),
+            PPV = sprintf("%s (%s-%s)", pct(ppv), pct(ppv_lo), pct(ppv_hi)),
+            F1 = sprintf("%.4f", f1)) %>%
+  kable()
+```
+
+```{r accuracy-plot, fig.height = 4.6}
+acc_typed %>%
+  filter(study %in% c("accuracy", "repeatability", "reproducibility")) %>%
+  select(sample, type, sensitivity, sens_lo, sens_hi, ppv, ppv_lo, ppv_hi) %>%
+  pivot_longer(c(sensitivity, ppv), names_to = "metric", values_to = "value") %>%
+  mutate(lo = ifelse(metric == "sensitivity", sens_lo, ppv_lo),
+         hi = ifelse(metric == "sensitivity", sens_hi, ppv_hi),
+         metric = recode(metric, sensitivity = "Sensitivity", ppv = "PPV")) %>%
+  ggplot(aes(x = value, y = sample, colour = type)) +
+  geom_errorbarh(aes(xmin = lo, xmax = hi), height = 0.25, position = position_dodge(width = 0.5)) +
+  geom_point(size = 2.2, position = position_dodge(width = 0.5)) +
+  facet_wrap(~metric) +
+  scale_colour_manual(values = pal) +
+  scale_x_continuous(labels = percent_format(accuracy = 0.1)) +
+  labs(x = NULL, y = NULL, colour = NULL, title = "Per-run accuracy with 95% confidence intervals")
+```
+
+### Specificity
+
+Specificity is reported per base: every high-confidence reference position that is not a truth variant counts as a
+negative, and any PASS call there is a false positive. Because nearly all positions are reference, this figure is
+always very close to 100%. PPV is the more informative measure of false-positive burden, so both are reported.
+
+```{r specificity}
+acc %>% filter(type == "ALL") %>%
+  transmute(Sample = sample, `Bases evaluated` = comma(eval_bp), `True negatives` = comma(tn), FP = fp,
+            Specificity = sprintf("%.5f%% (%.5f-%.5f)", 100 * specificity, 100 * spec_lo, 100 * spec_hi)) %>%
+  kable()
+```
+
+## 4. Precision: repeatability and reproducibility
+
+Concordance = calls with identical genotype in both replicates / all distinct calls in either replicate
+(PASS calls inside the evaluation region).
+
+```{r concordance}
+conc %>%
+  transmute(Study = study, `Replicate A` = sample_a, `Replicate B` = sample_b, Shared = shared,
+            `Only A` = only_a, `Only B` = only_b, `GT match` = genotype_match,
+            Concordance = sprintf("%s (%s-%s)", pct(concordance), pct(conc_lo), pct(conc_hi))) %>%
+  kable()
+```
+
+```{r concordance-plot, fig.height = 3.6}
+conc %>%
+  mutate(pair = paste(sub("HG001_", "", sample_a), "vs", sub("HG001_", "", sample_b))) %>%
+  ggplot(aes(x = concordance, y = reorder(pair, concordance), colour = study)) +
+  geom_errorbarh(aes(xmin = conc_lo, xmax = conc_hi), height = 0.25) +
+  geom_point(size = 2.4) +
+  scale_colour_manual(values = c(repeatability = "#41ab5d", reproducibility = "#807dba")) +
+  scale_x_continuous(labels = percent_format(accuracy = 0.1)) +
+  labs(x = "Pairwise genotype concordance", y = NULL, colour = NULL)
+```
+
+DISCORDANCE_NOTE
+
+## 5. Depth titration (limit of detection)
+
+```{r titration-plot, fig.height = 4}
+ggplot(titr, aes(x = nominal_depth, y = sensitivity, colour = type)) +
+  geom_hline(yintercept = c(0.99, 0.95), linetype = "dashed", colour = "grey60") +
+  geom_line(linewidth = 0.9) + geom_point(size = 2.2) +
+  scale_colour_manual(values = pal) +
+  scale_x_continuous(trans = "log2", breaks = sort(unique(titr$nominal_depth))) +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) +
+  labs(x = "Mean depth (x, log2 scale)", y = "Sensitivity", colour = NULL,
+       title = "Sensitivity vs sequencing depth (HG001)")
+```
+
+```{r titration-table}
+titr %>%
+  select(type, nominal_depth, observed_depth, sensitivity, ppv) %>%
+  pivot_wider(names_from = type, values_from = c(sensitivity, ppv)) %>%
+  transmute(`Nominal depth` = nominal_depth, `Observed depth` = observed_depth,
+            `SNV sens` = pct(sensitivity_SNV), `SNV PPV` = pct(ppv_SNV),
+            `Indel sens` = pct(sensitivity_INDEL), `Indel PPV` = pct(ppv_INDEL)) %>%
+  kable()
+```
+
+## 6. Limitations
+
+* The panel covers 1.5 Mb of chr20, so indel counts are small and their confidence intervals are wide.
+  A clinical validation would add more loci and more reference samples (for example HG003 to HG007) to reach the
+  sample sizes in the validation plan.
+* Repeatability and reproducibility replicates are read subsets from GIAB sequencing runs rather than separate
+  library preparations, so they capture sequencing and analysis variation but not wet-lab variation.
+* Only regions that GIAB marks as high-confidence are scored. Difficult regions (segmental duplications,
+  long homopolymers) are outside the benchmark and need separate handling, for example with orthogonal confirmation.
+* Copy-number variants, structural variants and mosaic variants are out of scope.
+
+<small>Generated by `reports/validation_report.Rmd` from the tables in `results_validation/validation/tables`.</small>
