@@ -1,0 +1,8 @@
+# Analytical validation acceptance criteria (see docs/VALIDATION_PLAN.md)
+accuracy:
+  SNV:   {sensitivity: 0.99, ppv: 0.99}
+  INDEL: {sensitivity: 0.95, ppv: 0.95}
+specificity: 0.9999          # per-base, within GIAB confident regions
+repeatability: 0.99          # pairwise genotype concordance, same run
+reproducibility: 0.98        # pairwise genotype concordance, different runs / instruments / dates
+lod_sensitivity: 0.99        # SNV sensitivity that defines the minimum depth

@@ -1,0 +1,6 @@
+title: "GermlineQC"
+subtitle: "Germline short-variant pipeline QC"
+report_comment: "FASTQ, alignment, coverage and variant-level QC for every sample in the run."
+show_analysis_paths: false
+module_order: [fastp, fastqc, samtools, picard, mosdepth, bcftools, snpeff]
+extra_fn_clean_exts: [".trim", ".md", ".recal", ".filtered", ".fastp", ".snpeff", ".bcftools_stats"]

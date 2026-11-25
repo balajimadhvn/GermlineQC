@@ -1,5 +1,5 @@
-data/
-work/
+/data/
+/work/
 results*/
 .nextflow*
 *.pyc
@@ -7,3 +7,5 @@ __pycache__/
 .pytest_cache/
 *.Rhistory
 .Rproj.user/
+/*.tbi
+/*.bai
