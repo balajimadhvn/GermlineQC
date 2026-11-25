@@ -1,0 +1,9 @@
+criterion	observed	threshold	result	detail
+SNV sensitivity (pooled)	0.992479	0.990000	PASS	14384 TP / 14493 truth variants across 8 runs; 95% CI lower bound 0.9909
+SNV PPV (pooled)	0.998890	0.990000	PASS	16 FP among 14417 PASS calls; 95% CI lower bound 0.9982
+INDEL sensitivity (pooled)	0.988868	0.950000	PASS	2576 TP / 2605 truth variants across 8 runs; 95% CI lower bound 0.9841
+INDEL PPV (pooled)	0.996296	0.950000	PASS	10 FP among 2700 PASS calls; 95% CI lower bound 0.9932
+Specificity (per base)	0.999998	0.999900	PASS	26 FP over 11,614,284 reference bases
+Repeatability (min pairwise concordance)	0.979167	0.990000	FAIL	3 pairs; worst HG001_repeat_1 vs HG001_repeat_3
+Reproducibility (min pairwise concordance)	0.980083	0.980000	PASS	6 pairs; worst HG001_run_2 vs HG001_run_3
+Minimum depth for SNV sensitivity >= 0.99	30	report	INFO	depths meeting target: [30, 50, 100]

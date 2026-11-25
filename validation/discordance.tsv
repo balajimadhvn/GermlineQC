@@ -1,0 +1,5 @@
+study	calls	n	median_dp	frac_dp_lt15	frac_dp_lt20	frac_gq_lt20
+repeatability	concordant	6355	27	0.028954	0.132337	0.000629
+repeatability	discordant	122	23	0.221311	0.336066	0.049180
+reproducibility	concordant	12727	28	0.025929	0.121081	0.000629
+reproducibility	discordant	211	22	0.194313	0.402844	0.042654

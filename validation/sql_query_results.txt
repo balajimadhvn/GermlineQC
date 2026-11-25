@@ -1,0 +1,168 @@
+   sample_id      qc_status  mean_depth  pct_20x  dup_rate  ts_tv
+----------------  ---------  ----------  -------  --------  -----
+HG001_depth_005x  FAIL              4.7      0.0       0.0   2.25
+HG001_depth_010x  FAIL              9.4   0.0043    0.0002   2.19
+HG001_depth_015x  FAIL             14.2   0.1141    0.0003    2.2
+HG001_depth_020x  FAIL             18.9   0.4415    0.0004   2.17
+HG001_depth_030x  FAIL             28.3   0.9046    0.0005   2.19
+HG001_depth_050x  PASS             47.1   0.9969    0.0008   2.19
+HG001_depth_100x  PASS             94.4   0.9997    0.0016   2.19
+HG001_repeat_1    FAIL             28.2   0.9002    0.0009   2.21
+HG001_repeat_2    FAIL             28.2   0.8993    0.0009   2.21
+HG001_repeat_3    FAIL             28.3   0.9009    0.0007   2.22
+HG001_run_1       FAIL             28.6    0.908    0.0012   2.22
+HG001_run_2       FAIL             28.4   0.9101    0.0013   2.19
+HG001_run_3       FAIL             28.3   0.9062    0.0015   2.22
+HG001_run_4       FAIL             28.3   0.9119    0.0024    2.2
+HG002_acc         FAIL             28.4   0.8995    0.0021   2.25
+   sample_id           metric        value   min_allowed  max_allowed  status
+----------------  -----------------  ------  -----------  -----------  ------
+HG001_run_3       pct_target_20x     0.9062         0.95               FAIL
+HG001_repeat_1    pct_target_20x     0.9002         0.95               FAIL
+HG002_acc         pct_target_20x     0.8995         0.95               FAIL
+HG001_depth_005x  mean_target_depth     4.7         20.0               FAIL
+HG001_depth_005x  pct_target_10x     0.0303         0.98               FAIL
+HG001_depth_005x  pct_target_20x        0.0         0.95               FAIL
+HG001_run_4       pct_target_20x     0.9119         0.95               FAIL
+HG001_depth_020x  mean_target_depth    18.9         20.0               FAIL
+HG001_depth_020x  pct_target_10x     0.9729         0.98               FAIL
+HG001_depth_020x  pct_target_20x     0.4415         0.95               FAIL
+HG001_run_2       pct_target_20x     0.9101         0.95               FAIL
+HG001_depth_030x  pct_target_20x     0.9046         0.95               FAIL
+HG001_depth_015x  mean_target_depth    14.2         20.0               FAIL
+HG001_depth_015x  pct_target_10x      0.858         0.98               FAIL
+HG001_depth_015x  pct_target_20x     0.1141         0.95               FAIL
+HG001_run_1       pct_target_20x      0.908         0.95               FAIL
+HG001_repeat_2    pct_target_20x     0.8993         0.95               FAIL
+HG001_repeat_3    pct_target_20x     0.9009         0.95               FAIL
+HG001_depth_010x  mean_target_depth     9.4         20.0               FAIL
+HG001_depth_010x  pct_target_10x     0.4632         0.98               FAIL
+HG001_depth_010x  pct_target_20x     0.0043         0.95               FAIL
+   sample_id      var_type  genotype   n
+----------------  --------  --------  ----
+HG001_depth_005x  INDEL     het        160
+HG001_depth_005x  INDEL     hom_alt    122
+HG001_depth_005x  SNV       het        845
+HG001_depth_005x  SNV       hom_alt    561
+HG001_depth_010x  INDEL     het        289
+HG001_depth_010x  INDEL     hom_alt    133
+HG001_depth_010x  SNV       het       1263
+HG001_depth_010x  SNV       hom_alt    529
+HG001_depth_015x  INDEL     het        359
+HG001_depth_015x  INDEL     hom_alt    126
+HG001_depth_015x  SNV       het       1381
+HG001_depth_015x  SNV       hom_alt    522
+HG001_depth_020x  INDEL     het        393
+HG001_depth_020x  INDEL     hom_alt    124
+HG001_depth_020x  SNV       het       1410
+HG001_depth_020x  SNV       hom_alt    519
+HG001_depth_030x  INDEL     het        432
+HG001_depth_030x  INDEL     hom_alt    122
+HG001_depth_030x  SNV       het       1441
+HG001_depth_030x  SNV       hom_alt    524
+HG001_depth_050x  INDEL     het        443
+HG001_depth_050x  INDEL     hom_alt    118
+HG001_depth_050x  SNV       het       1443
+HG001_depth_050x  SNV       hom_alt    525
+HG001_depth_100x  INDEL     het        467
+HG001_depth_100x  INDEL     hom_alt    119
+HG001_depth_100x  SNV       het       1450
+HG001_depth_100x  SNV       hom_alt    526
+HG001_repeat_1    INDEL     het        433
+HG001_repeat_1    INDEL     hom_alt    121
+HG001_repeat_1    SNV       het       1440
+HG001_repeat_1    SNV       hom_alt    522
+HG001_repeat_2    INDEL     het        429
+HG001_repeat_2    INDEL     hom_alt    118
+HG001_repeat_2    SNV       het       1434
+HG001_repeat_2    SNV       hom_alt    525
+HG001_repeat_3    INDEL     het        434
+HG001_repeat_3    INDEL     hom_alt    120
+HG001_repeat_3    SNV       het       1437
+HG001_repeat_3    SNV       hom_alt    524
+HG001_run_1       INDEL     het        427
+HG001_run_1       INDEL     hom_alt    124
+HG001_run_1       SNV       het       1433
+HG001_run_1       SNV       hom_alt    523
+HG001_run_2       INDEL     het        433
+HG001_run_2       INDEL     hom_alt    120
+HG001_run_2       SNV       het       1448
+HG001_run_2       SNV       hom_alt    519
+HG001_run_3       INDEL     het        425
+HG001_run_3       INDEL     hom_alt    123
+HG001_run_3       SNV       het       1430
+HG001_run_3       SNV       hom_alt    529
+HG001_run_4       INDEL     het        418
+HG001_run_4       INDEL     hom_alt    117
+HG001_run_4       SNV       het       1432
+HG001_run_4       SNV       hom_alt    523
+HG002_acc         INDEL     het        345
+HG002_acc         INDEL     hom_alt    169
+HG002_acc         SNV       het       1192
+HG002_acc         SNV       hom_alt    746
+     gene         impact   distinct_variants  samples
+---------------  --------  -----------------  -------
+CTSZ             LOW                       3       15
+GNAS             LOW                       3       14
+JAG1             LOW                       3       15
+SNAP25-AS1       LOW                       3       15
+ANKEF1           LOW                       2       15
+NPEPL1           LOW                       2       15
+SLX4IP           MODERATE                  2       15
+TUBB1            MODERATE                  2       14
+ANKEF1           MODERATE                  1       13
+ENSG00000232900  LOW                       1       13
+ENSG00000234900  LOW                       1       13
+ENSG00000302965  LOW                       1        1
+ENSG00000303576  LOW                       1        5
+GNAS             MODERATE                  1       13
+LINC01752        LOW                       1        1
+chrom    pos     ref  alt       gene           hgvs_p      clinvar_sig                      clinvar_review
+-----  --------  ---  ---  ---------------  ------------  -------------  ----------------------------------------------------
+chr20  10244102  G    A    SNAP25                         Benign         criteria_provided,_single_submitter
+chr20  10253609  G    A    SNAP25                         Benign         criteria_provided,_single_submitter
+chr20  10275458  C    A    SNAP25                         Likely_benign  criteria_provided,_multiple_submitters,_no_conflicts
+chr20  10278006  C    A    SNAP25                         Benign         criteria_provided,_multiple_submitters,_no_conflicts
+chr20  10296804  A    C    SNAP25                         Benign         criteria_provided,_multiple_submitters,_no_conflicts
+chr20  10306436  G    T    SNAP25                         Benign         criteria_provided,_multiple_submitters,_no_conflicts
+chr20  10412497  C    G    ENSG00000285508                Benign         criteria_provided,_multiple_submitters,_no_conflicts
+chr20  10637926  T    C    JAG1                           Benign         criteria_provided,_multiple_submitters,_no_conflicts
+chr20  10638366  A    C    JAG1                           Benign         criteria_provided,_multiple_submitters,_no_conflicts
+chr20  10639627  G    A    JAG1             p.Tyr1176Tyr  Benign         criteria_provided,_multiple_submitters,_no_conflicts
+chr20  10639738  A    G    JAG1             p.Tyr1139Tyr  Benign         criteria_provided,_multiple_submitters,_no_conflicts
+chr20  10640565  C    T    JAG1                           Benign         criteria_provided,_single_submitter
+chr20  10640657  A    C    JAG1                           Benign         criteria_provided,_multiple_submitters,_no_conflicts
+chr20  10641432  C    CA   JAG1                           Benign         criteria_provided,_multiple_submitters,_no_conflicts
+chr20  10641432  CA   C    JAG1                           Benign         criteria_provided,_multiple_submitters,_no_conflicts
+chr20  10642186  G    T    JAG1                           Benign         criteria_provided,_single_submitter
+chr20  10642214  C    T    JAG1                           Benign         criteria_provided,_single_submitter
+chr20  10642371  T    C    JAG1                           Benign         criteria_provided,_single_submitter
+chr20  10643542  A    G    JAG1                           Benign         criteria_provided,_multiple_submitters,_no_conflicts
+chr20  10644276  TCA  T    JAG1                           Benign         criteria_provided,_single_submitter
+   sample_id      chrom    pos     ref         alt         genotype  depth  gq   vaf
+----------------  -----  --------  ---  -----------------  --------  -----  --  -----
+HG001_depth_005x  chr20  10000775  A    G                  het           7  95  0.571
+HG001_depth_005x  chr20  10002077  G    A                  hom_alt       4  12    1.0
+HG001_depth_005x  chr20  10004393  A    G                  hom_alt       9  27    1.0
+HG001_depth_005x  chr20  10005015  G    A                  hom_alt       3   9    1.0
+HG001_depth_005x  chr20  10005281  T    C                  het           4  29   0.75
+HG001_depth_005x  chr20  10005437  A    G                  het           6  24  0.833
+HG001_depth_005x  chr20  10005695  A    G                  hom_alt       4  12    1.0
+HG001_depth_005x  chr20  10005834  T    C                  het           5  30    0.8
+HG001_depth_005x  chr20  10005838  C    CT                 het           4  33   0.75
+HG001_depth_005x  chr20  10006761  A    G                  hom_alt       4  12    1.0
+HG001_depth_005x  chr20  10006826  A    G                  hom_alt       2   6    1.0
+HG001_depth_005x  chr20  10007229  G    A                  hom_alt       2   6    1.0
+HG001_depth_005x  chr20  10008603  G    A                  hom_alt       4  12    1.0
+HG001_depth_005x  chr20  10009048  G    A                  het           5  66    0.6
+HG001_depth_005x  chr20  10009180  C    T                  hom_alt       3   9    1.0
+HG001_depth_005x  chr20  10009222  C    CTAGGCTGCCTTGCATA  hom_alt       4  12    1.0
+HG001_depth_005x  chr20  10009286  G    A                  het           5  65    0.6
+HG001_depth_005x  chr20  10009481  G    A                  hom_alt       5  15    1.0
+HG001_depth_005x  chr20  10009685  CTA  C                  het           4  33   0.75
+HG001_depth_005x  chr20  10009927  C    T                  het           8  53   0.75
+  category     variants
+-------------  --------
+all samples         962
+private             960
+shared (some)      1643

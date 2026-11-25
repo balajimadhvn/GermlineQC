@@ -1,0 +1,16 @@
+sample	study	reference_material	source	nominal_depth	observed_depth	pct_target_20x	qc_status
+HG001_repeat_1	repeatability	HG001	batch_2014-01_HISEQ1	30.0	28.200000	0.900200	FAIL
+HG001_repeat_2	repeatability	HG001	batch_2014-01_HISEQ1	30.0	28.200000	0.899300	FAIL
+HG001_repeat_3	repeatability	HG001	batch_2014-01_HISEQ1	30.0	28.300000	0.900900	FAIL
+HG001_run_1	reproducibility	HG001	run_2013-12-19_D00360	30.1	28.600000	0.908000	FAIL
+HG001_run_2	reproducibility	HG001	run_2013-12-23_D00360	29.9	28.400000	0.910100	FAIL
+HG001_run_3	reproducibility	HG001	run_2014-03-13_HISEQ1	30.0	28.300000	0.906200	FAIL
+HG001_run_4	reproducibility	HG001	run_2014-04-07_HISEQ1	30.0	28.300000	0.911900	FAIL
+HG001_depth_005x	titration	HG001	all runs pooled	5.0	4.700000	0.000000	FAIL
+HG001_depth_010x	titration	HG001	all runs pooled	10.0	9.400000	0.004300	FAIL
+HG001_depth_015x	titration	HG001	all runs pooled	15.0	14.200000	0.114100	FAIL
+HG001_depth_020x	titration	HG001	all runs pooled	20.1	18.900000	0.441500	FAIL
+HG001_depth_030x	titration	HG001	all runs pooled	30.0	28.300000	0.904600	FAIL
+HG001_depth_050x	titration	HG001	all runs pooled	49.9	47.100000	0.996900	PASS
+HG001_depth_100x	titration	HG001	all runs pooled	100.0	94.400000	0.999700	PASS
+HG002_acc	accuracy	HG002	NHGRI 300x	30.0	28.400000	0.899500	FAIL
